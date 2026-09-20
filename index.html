@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KCC - عيادات رعاية الكلى د.احمد رأفت </title>
+    <title>BMC - القائمة الإسلامية الذكية</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -355,8 +355,8 @@
 
     <script>
         // إعدادات JSONBin Cloud Storage
-        const JSONBIN_ID = "6aaaf23cffd5d160530f7667";
-        const JSONBIN_SECRET_KEY = "$2a$10$fJGI35HTT7hUF3YRZFRL2OPED6pDgpasT4wTUZvt6TxMFN2sRjGxq";
+        const JSONBIN_ID = "6ab03671ac6210605ae38c1a";
+        const JSONBIN_SECRET_KEY = "$2a$10$iySCHqk3quyupnb7QqHeA.NvGFdmyPUA7ZTzZ7/LOKUe0WdRpdVCW";
 
         const defaultConfig = {
             title: "",
@@ -401,7 +401,9 @@
         }
 
         async function updateCloudConfig(newConfigData) {
-            if (!JSONBIN_ID || JSONBIN_ID.includes("ضع_هنا")) return false;
+            if (!JSONBIN_ID || JSONBIN_ID.includes("ضع_هنا")) {
+                return { ok: false, status: 0, message: "لم يتم ضبط JSONBIN_ID بعد." };
+            }
 
             try {
                 const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_ID}`, {
@@ -413,10 +415,28 @@
                     body: JSON.stringify(newConfigData)
                 });
 
-                return response.ok;
+                if (response.ok) {
+                    return { ok: true, status: response.status, message: "تم الحفظ بنجاح." };
+                }
+
+                // الطلب وصل لكن اتّرفض (مثلاً 401 مفتاح غلط، أو 404 الـ Bin ID مش موجود)
+                let bodyText = "";
+                try { bodyText = await response.text(); } catch (_) {}
+                console.error("JSONBin rejected the request:", response.status, bodyText);
+
+                let message = `فشل الحفظ - كود الخطأ: ${response.status}.`;
+                if (response.status === 401 || response.status === 403) {
+                    message += " المفتاح (Master Key) غير صحيح أو لا يخص هذا الـ Bin.";
+                } else if (response.status === 404) {
+                    message += " الـ Bin ID غير موجود أو تم حذفه.";
+                } else {
+                    message += " راجع الـ Console لمزيد من التفاصيل.";
+                }
+                return { ok: false, status: response.status, message };
             } catch (err) {
-                console.error("خطأ حفظ البيانات سحابياً:", err);
-                return false;
+                // فشل الطلب قبل ما يوصل للسيرفر خالص (مفيش إنترنت، أو الدومين محجوب، أو مشكلة CORS)
+                console.error("خطأ حفظ البيانات سحابياً (network/CORS):", err);
+                return { ok: false, status: -1, message: "تعذر الوصول لخادم JSONBin. تأكد من الاتصال بالإنترنت أو أن الدومين api.jsonbin.io غير محجوب." };
             }
         }
 
@@ -570,16 +590,16 @@
                     currentConfig.adminPass = newPass;
                 }
 
-                const success = await updateCloudConfig(currentConfig);
+                const result = await updateCloudConfig(currentConfig);
                 btnSave.innerText = "حفظ والتحديث السحابي المباشر";
                 btnSave.disabled = false;
 
-                if (success) {
+                if (result.ok) {
                     applyConfigToUI();
                     closeAdminPanel();
                     showToast("تم الحفظ والتحديث سحابياً بنجاح!");
                 } else {
-                    showToast("فشل الحفظ، تأكد من اتصال الإنترنت!");
+                    showToast(result.message);
                 }
             };
 
@@ -613,7 +633,7 @@
             document.getElementById('toastMsg').innerText = msg;
             toast.classList.remove('hidden');
             toast.classList.add('toast-slide-up');
-            setTimeout(() => { toast.classList.add('hidden'); }, 2500);
+            setTimeout(() => { toast.classList.add('hidden'); }, 4000);
         }
 
         window.onload = fetchCloudConfig;
