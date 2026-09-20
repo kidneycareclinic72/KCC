@@ -1,4 +1,4 @@
-<DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -82,7 +82,7 @@
                 <div class="absolute -inset-1 rounded-full bg-gold-500/10 blur-sm"></div>
             </div>
             
-            <h1 id="displayTitle" class="text-2xl font-bold font-quran gold-gradient-text mb-1">BMC - Muslim List</h1>
+            <h1 id="displayTitle" class="text-2xl font-bold font-quran gold-gradient-text mb-1"></h1>
             <p id="displaySubtitle" class="text-xs text-emerald-200/80">تلاوات قرآنية عذبة وأذكار الصباح والمساء</p>
             
             <div class="mt-4 p-3 rounded-xl glass-card border border-gold-500/20 max-w-xs mx-auto">
@@ -333,7 +333,7 @@
         const JSONBIN_SECRET_KEY = "$2a$10$fJGI35HTT7hUF3YRZFRL2OPED6pDgpasT4wTUZvt6TxMFN2sRjGxq";
 
         const defaultConfig = {
-            title: "BMC - Muslim List",
+            title: "",
             subtitle: "تلاوات قرآنية عذبة وأذكار الصباح والمساء",
             soundcloudUrl: "https://soundcloud.com/ahmed-habib-816298036/sets/muslim-list",
             kafrLoc: "",
@@ -363,6 +363,7 @@
                     const data = await response.json();
                     if (data && data.record) {
                         currentConfig = Object.assign({}, defaultConfig, data.record);
+                        currentConfig.title = ""; // تفريغ العنوان بشكل دائماً
                         applyConfigToUI();
                     }
                 }
@@ -517,7 +518,7 @@
                 const liVal = document.getElementById('inputLinkedin').value.trim();
                 const fbVal = document.getElementById('inputFacebook').value.trim();
 
-                if (titleVal !== "") currentConfig.title = titleVal;
+                currentConfig.title = titleVal;
                 if (scVal !== "") currentConfig.soundcloudUrl = scVal;
                 if (kafrVal !== "") currentConfig.kafrLoc = kafrVal;
                 if (fifthVal !== "") currentConfig.fifthLoc = fifthVal;
