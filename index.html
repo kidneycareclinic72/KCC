@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KCC - عيادات رعاية الكلى</title>
+    <title>BMC - القائمة الإسلامية الذكية</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -551,6 +551,39 @@
             showToast("تم إزالة اللوجو المخصص");
         }
 
+        function resizeAndCompressImage(file, maxDimension, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error("تعذر قراءة الملف"));
+                reader.onload = (evt) => {
+                    const img = new Image();
+                    img.onerror = () => reject(new Error("تعذر تحميل الصورة"));
+                    img.onload = () => {
+                        let { width, height } = img;
+                        if (width > height && width > maxDimension) {
+                            height = Math.round(height * (maxDimension / width));
+                            width = maxDimension;
+                        } else if (height > maxDimension) {
+                            width = Math.round(width * (maxDimension / height));
+                            height = maxDimension;
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // نحاول JPEG أولاً (أصغر حجماً)، وممكن نرجع PNG لو الصورة فيها شفافية مطلوبة
+                        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        resolve(dataUrl);
+                    };
+                    img.src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         async function saveAdminSettings(e) {
             if (e) e.preventDefault();
 
@@ -604,11 +637,26 @@
             };
 
             if (fileInput.files && fileInput.files[0]) {
-                const reader = new FileReader();
-                reader.onload = async function(evt) {
-                    await performSave(evt.target.result);
-                };
-                reader.readAsDataURL(fileInput.files[0]);
+                try {
+                    btnSave.innerText = "جاري ضغط الصورة...";
+                    const compressedLogo = await resizeAndCompressImage(fileInput.files[0], 300, 0.75);
+
+                    // تأكيد إضافي إن الحجم بقى معقول (أقل من ~350KB تقريباً كنص Base64)
+                    if (compressedLogo.length > 350000) {
+                        btnSave.innerText = "حفظ والتحديث السحابي المباشر";
+                        btnSave.disabled = false;
+                        showToast("الصورة لسه كبيرة جداً حتى بعد الضغط، جرب صورة أخرى أصغر.");
+                        return;
+                    }
+
+                    btnSave.innerText = "جاري الحفظ السحابي...";
+                    await performSave(compressedLogo);
+                } catch (err) {
+                    console.error("خطأ معالجة الصورة:", err);
+                    btnSave.innerText = "حفظ والتحديث السحابي المباشر";
+                    btnSave.disabled = false;
+                    showToast("تعذرت معالجة الصورة، جرب صورة أخرى.");
+                }
             } else {
                 await performSave(null);
             }
